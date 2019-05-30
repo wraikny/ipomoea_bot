@@ -1,5 +1,5 @@
 [package]
-name = "ipomoea-bot"
+name = "ipomoea_bot"
 version = "0.1.0"
 authors = ["wraikny <writtenknown@gmail.com>"]
 edition = "2018"
@@ -7,3 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rand = "0.6.5"
+
+serde = "1.0"
+serde_derive = "1.0"
+
+lazy_static = "1.3.0"
+regex = "1"
+
+ron = "0.5.1"
+discord = "0.8.0"
