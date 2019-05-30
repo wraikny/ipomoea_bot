@@ -10,7 +10,17 @@ use discord::model::{
     Message,
 };
 
+use crate::{
+    config::Usage,
+};
+
 pub trait BotFunction {
+    fn usage(&self) -> &Usage;
+
+    fn error_msg(&self, msg: &str) -> Result<(), String> {
+        Err(format!("{}\n{}", msg, self.usage().usage()))
+    }
+
     fn func(&mut self, args: &str, message: &Message) -> Result<(), Box<Error>>;
 }
 

@@ -20,11 +20,11 @@ impl Config {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Usage {
-    pub usage: String,
-    pub example_input: String,
-    pub example_output: String,
+    usage: String,
+    example_input: String,
+    example_output: String,
 }
 
 impl Usage {
@@ -33,5 +33,13 @@ impl Usage {
         let o = ron::de::from_str(&content)?;
 
         Ok(o)
+    }
+
+    pub fn usage(&self) -> String {
+        format!("Usage:```{}```", &self.usage)
+    }
+
+    pub fn example(&self) -> String {
+        format!("Example:```{}``````{}```", &self.example_input, &self.example_output)
     }
 }

@@ -15,7 +15,7 @@ use std::{
 use ipomoea_bot::{
     config::{Config, Usage},
     funcs::{
-        self,
+        dice::Dice,
         BotFunction,
     },
     message::{MessageHandler},
@@ -30,17 +30,20 @@ fn main() {
     let config = Config::load("config.ron")
         .expect("failed to load config file");
 
-    let usages = Usage::load("usages.ron")
-        .expect("failed to load usages file");
     
     let discord = Discord::from_bot_token(&config.token)
         .expect("failed to login");
     let discord = Rc::new(discord);
     
+    let mut usages = Usage::load("usages.ron")
+        .expect("failed to load usages file");
+    
     let mut functions: HashMap<String, Box<BotFunction>> = HashMap::new();
-    functions.insert("dice".to_owned(), box funcs::dice::Dice::new(discord.clone(), &config));
 
-    let mut message_handler = MessageHandler::new(discord.clone(), usages, functions);
+    let dice = box Dice::new(usages.remove("dice").unwrap(), discord.clone(), &config);
+    functions.insert("dice".to_owned(), dice);
+
+    let mut message_handler = MessageHandler::new(discord.clone(), functions);
 
     // Establish and use a websocket connection
     let (mut connection, _) = discord.connect()

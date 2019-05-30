@@ -7,7 +7,6 @@ use std::{
 };
 
 use crate::{
-    config::{Usage},
     funcs::{
         BotFunction,
     },
@@ -23,18 +22,16 @@ use regex::Regex;
 
 pub struct MessageHandler {
     discord: Rc<Discord>,
-    usages: HashMap<String, Usage>,
     functions: HashMap<String, Box<BotFunction>>,
 }
 
 impl MessageHandler {
     pub fn new(
         discord: Rc<Discord>,
-        usages: HashMap<String, Usage>,
         functions: HashMap<String, Box<BotFunction>>
     ) -> Self {
         MessageHandler {
-            discord, usages, functions
+            discord, functions
         }
     }
 
@@ -53,22 +50,17 @@ impl MessageHandler {
     fn usage(&self, channel_id: ChannelId, cmd: &str, args: &str) {
         let cmds: HashSet<_> = args.split(" ").filter(|s| *s != "").collect();
         for name in cmds.iter() {
-            if self.functions.contains_key(*name) {
-                match self.usages.get(*name) {
-                    Some(u) => {
-                        let usage = format!("Usage:```{}```", &u.usage);
-                        let example = format!("Example:```{}``````{}```", &u.example_input, &u.example_output);
-                        let msg = format!("{}{}", usage, example);
-                        self.send_message(channel_id, &msg, "", false);
-                    },
-                    None => {
-                        let msg = format!("Command {} exists, but its usage doesn't exist", name);
-                        println!("{}", &msg);
-                        self.send_message(channel_id, &msg, "", false);
-                    },
-                }
-            } else {
-                self.cmd_not_found(channel_id, cmd, args);
+            match self.functions.get(*name) {
+                Some(f) => {
+                    let u = f.usage();
+                    let msg = format!("{}{}", u.usage(), u.example());
+                    self.send_message(channel_id, &msg, "", false);
+                },
+                None => {
+                    let msg = format!("Command {} exists, but its usage doesn't exist", name);
+                    println!("{}", &msg);
+                    self.send_message(channel_id, &msg, "", false);
+                },
             }
         }
     }
@@ -78,14 +70,15 @@ impl MessageHandler {
             .map(|k| format!("{}", k))
             .collect::<Vec<_>>()
             .join("\n");
-        self.send_message(channel_id, &functions, "", false);
+        let msg = format!("Available commands:\n{}", functions);
+        self.send_message(channel_id, &msg, "", false);
     }
 
     fn functions(&mut self, message: &Message, cmd: &str, args: &str) {
         match self.functions.get_mut(cmd) {
             Some(f) => {
                 if let Err(e) = f.func(args, message) {
-                    println!("Error occured: {:?}", e);
+                    println!("Error occured:\n{:?}", e);
                     self.send_message(message.channel_id, &format!("{}", e), "", false);
                 }
             },

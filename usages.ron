@@ -1,6 +1,6 @@
 {
     "dice": Usage(
-        usage: "!dice (Int)d(Int) ..",
+        usage: "!dice (Count: Int)d(Max: Int) .. (0 < Count <= 100)",
         example_input: "!dice 1d6",
         example_output: "1d6: [5] => 5",
     ),

@@ -12,7 +12,12 @@ use rand::Rng;
 use crate::config::{Config};
 use super::BotFunction;
 
+use crate::{
+    config::Usage,
+};
+
 pub struct Dice {
+    usage: Usage,
     rng: rand::prelude::ThreadRng,
 
     discord: Rc<Discord>,
@@ -20,8 +25,9 @@ pub struct Dice {
 }
 
 impl Dice {
-    pub fn new(discord: Rc<Discord>, config: &Config) -> Self {
+    pub fn new(usage: Usage, discord: Rc<Discord>, config: &Config) -> Self {
         Dice {
+            usage,
             rng: rand::thread_rng(),
             discord: discord,
             dice_max: config.dice_max,
@@ -30,6 +36,10 @@ impl Dice {
 }
 
 impl BotFunction for Dice {
+    fn usage(&self) -> &Usage {
+        &self.usage
+    }
+
     fn func(&mut self, args: &str, message: &Message) -> Result<(), Box<Error>> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"(?P<count>\d+)[dD](?P<roll>\d+)").unwrap();
@@ -38,18 +48,19 @@ impl BotFunction for Dice {
         let args : Vec<&str> = args.split(" ").filter(|s| *s != "").collect();
 
         if args.len() == 0 {
-            let _ = Err("'!dice' requires one or more arguments.")?;
+            self.error_msg("'!dice' requires one or more arguments.")?;
         }
 
-        let msg = args.into_iter()
+        let mut results = args.into_iter()
             .map(|arg| {
                 let r : Result<String, Box<Error>> = (|| {
-                    let cap = RE.captures(arg).ok_or("Failed to parse into MdN")?;
+                    let cap = RE.captures(arg).ok_or("Failed to parsing")?;
                     let count: i32 = (&cap["count"]).parse()?;
 
                     if count > self.dice_max {
-                        let msg = format!("dice count must less than {}", self.dice_max);
-                        let _ = Err(msg)?;
+                        Err(format!("Dice count must less than {}", self.dice_max))?;
+                    } else if count < 0 {
+                        Err("Dice count must larger than 0")?;
                     }
 
                     let roll: i32 = (&cap["roll"]).parse()?;
@@ -63,18 +74,26 @@ impl BotFunction for Dice {
                     Ok(format!("[{}] => {}", rolls_str, sum))
                 })();
                 (arg, r)
-            })
-            .map(|(arg, r)| {
-                let s = match r {
-                    Ok(s) => s,
-                    Err(e) => format!("{}", e),
-                };
-                format!("{}: {}", arg, s)
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
+            });
 
-        let _ = self.discord.send_message(message.channel_id, &msg, "", false)?;
+        if results.any(|(_, r)| r.is_err()) {
+            let msg = 
+                results
+                .filter(|(_, r)| r.is_err())
+                .map(|(arg, e)| {
+                    format!("{}: {}", arg, e.unwrap_err())
+                }).collect::<Vec<_>>().join("\n");
+
+            self.error_msg(&msg)?;
+        } else {
+            let msg =
+                results
+                .map(|(arg, r)| {
+                    format!("{}: {}", arg, r.unwrap())
+                }).collect::<Vec<_>>().join("\n");
+            
+            self.discord.send_message(message.channel_id, &msg, "", false)?;
+        }
 
         Ok(())
     }
