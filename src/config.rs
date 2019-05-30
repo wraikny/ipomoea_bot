@@ -7,6 +7,7 @@ use std::{
 #[derive(Deserialize)]
 pub struct Config {
     pub token: String,
+    pub dice_max: i32
 }
 
 impl Config {
