@@ -47,7 +47,7 @@ impl MessageHandler {
         self.send_message(channel_id, &msg, "", false);
     }
 
-    fn usage(&self, channel_id: ChannelId, cmd: &str, args: &str) {
+    fn usage(&self, channel_id: ChannelId, _cmd: &str, args: &str) {
         let cmds: HashSet<_> = args.split(" ").filter(|s| *s != "").collect();
         for name in cmds.iter() {
             match self.functions.get(*name) {
