@@ -10,3 +10,4 @@ extern crate rand;
 
 pub mod config;
 pub mod funcs;
+pub mod message;

@@ -5,22 +5,22 @@ use discord::model::{
     Message,
 };
 
-use std::error::Error;
+use std::{rc::Rc, error::Error};
 
 use rand::Rng;
 
 use crate::config::{Config};
 use super::BotFunction;
 
-pub struct Dice<'a> {
+pub struct Dice {
     rng: rand::prelude::ThreadRng,
 
-    discord: &'a Discord,
+    discord: Rc<Discord>,
     dice_max: i32,
 }
 
-impl<'a> Dice<'a> {
-    pub fn new(discord: &'a Discord, config: &Config) -> Self {
+impl Dice {
+    pub fn new(discord: Rc<Discord>, config: &Config) -> Self {
         Dice {
             rng: rand::thread_rng(),
             discord: discord,
@@ -29,7 +29,7 @@ impl<'a> Dice<'a> {
     }
 }
 
-impl<'a> BotFunction for Dice<'a> {
+impl BotFunction for Dice {
     fn func(&mut self, args: &str, message: &Message) -> Result<(), Box<Error>> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"(?P<count>\d+)[dD](?P<roll>\d+)").unwrap();
