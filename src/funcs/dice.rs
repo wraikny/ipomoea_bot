@@ -51,19 +51,18 @@ impl BotFunction for Dice {
             self.error_msg("'!dice' requires one or more arguments.")?;
         }
 
-        let mut results = args.into_iter()
+        let results : Vec<_> = args.into_iter()
             .map(|arg| {
-                let r : Result<String, Box<Error>> = (|| {
-                    let cap = RE.captures(arg).ok_or("Failed to parsing")?;
+                let r : Result<(i32, String), Box<Error>> = (|| {
+                    let cap = RE.captures(arg).ok_or("Failed to parse")?;
                     let count: i32 = (&cap["count"]).parse()?;
 
                     if count > self.dice_max {
                         Err(format!("Dice count must less than {}", self.dice_max))?;
-                    } else if count < 0 {
-                        Err("Dice count must larger than 0")?;
                     }
 
                     let roll: i32 = (&cap["roll"]).parse()?;
+
                     let rolls: Vec<i32> = (0..count).map(|_| self.rng.gen_range(1, roll + 1)).collect();
 
                     let sum: i32 = rolls.iter().fold(0, |sum, i| sum + i);
@@ -71,14 +70,15 @@ impl BotFunction for Dice {
                         .map(|r| r.to_string())
                         .collect::<Vec<String>>().join(", ");
 
-                    Ok(format!("[{}] => {}", rolls_str, sum))
+                    Ok((sum, format!("[{}] => {}", rolls_str, sum)))
                 })();
-                (arg, r)
-            });
+                (arg, r.map_err(|e| format!("{}", e)))
+            }).collect();
 
-        if results.any(|(_, r)| r.is_err()) {
+        if results.clone().iter().any(|(_, r)| r.is_err()) {
             let msg = 
                 results
+                .into_iter()
                 .filter(|(_, r)| r.is_err())
                 .map(|(arg, e)| {
                     format!("{}: {}", arg, e.unwrap_err())
@@ -86,11 +86,20 @@ impl BotFunction for Dice {
 
             self.error_msg(&msg)?;
         } else {
+            let mut sum_all = 0;
+
+            let length = results.len();
+            
             let msg =
                 results
+                .into_iter()
                 .map(|(arg, r)| {
-                    format!("{}: {}", arg, r.unwrap())
+                    let (sum, s) = r.unwrap();
+                    sum_all += sum;
+                    format!("{}: {}", arg, s)
                 }).collect::<Vec<_>>().join("\n");
+
+            let msg = if length > 1 { msg + &format!("\n=> {}\n", sum_all) } else { msg };
             
             self.discord.send_message(message.channel_id, &msg, "", false)?;
         }
