@@ -9,6 +9,7 @@ extern crate regex;
 use std::{
     collections::{
         HashMap,
+        HashSet,
     },
 };
 
@@ -49,11 +50,12 @@ fn main() {
                 lazy_static! {
                     static ref RE: Regex = Regex::new(r"^!(?P<cmd>\w+)\s*(?P<args>.*)").unwrap();
                 }
+                
                 if let Some(cap) = RE.captures(&message.content) {
                     let cmd = &cap["cmd"];
                     let args = &cap["args"];
 
-                    let not_found_proc = || {
+                    let cmd_not_found = || {
                         let msg = format!("command '{}' is not found.", cmd);
                         println!("{}", &msg);
                         println!("With args: {}", args);
@@ -61,31 +63,34 @@ fn main() {
                         let _ = discord.send_message(message.channel_id, &msg, "", false);
                     };
 
-                    if cmd == "usage" {
-                        for name in args.split(" ").filter(|s| *s != "") {
-                            match functions.get(name) {
+                    match cmd {
+                        "usage" => {
+                            let cmds: HashSet<_> = args.split(" ").filter(|s| *s != "").collect();
+                            for name in cmds.iter() {
+                                match functions.get(name) {
+                                    Some(f) => {
+                                        let usage = format!("Usage:```{}```", f.usage());
+                                        let ex = f.example();
+                                        let example = format!("Example:```{}``````{}```", ex.0, ex.1);
+                                        let msg = format!("{}{}", usage, example);
+                                        let _ = discord.send_message(message.channel_id, &msg, "", false);
+                                    },
+                                    None => cmd_not_found(),
+                                }
+                            }
+                        },
+                        _ => {
+                            match functions.get_mut(cmd) {
                                 Some(f) => {
-                                    let usage = format!("Usage:```{}```", f.usage());
-                                    let ex = f.example();
-                                    let example = format!("Example:```{}``````{}```", ex.0, ex.1);
-                                    let msg = format!("{}{}", usage, example);
-                                    let _ = discord.send_message(message.channel_id, &msg, "", false);
+                                    if let Err(e) = f.func(args, &message) {
+                                        println!("Error occured: {:?}", e);
+                                        let _ = discord.send_message(message.channel_id, &format!("{}", e), "", false);
+                                    }
                                 },
-                                None => not_found_proc(),
+                                None => cmd_not_found(),
                             }
                         }
-                    } else {
-                        match functions.get_mut(cmd) {
-                            Some(f) => {
-                                if let Err(e) = f.func(args, &message) {
-                                    println!("Error occured: {:?}", e);
-                                    let _ = discord.send_message(message.channel_id, &format!("{}", e), "", false);
-                                }
-                            },
-                            None => not_found_proc(),
-                        }
                     }
-
                 }
             }
             Ok(_) => {}
