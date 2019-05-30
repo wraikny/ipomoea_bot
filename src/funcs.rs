@@ -11,8 +11,6 @@ use discord::model::{
 };
 
 pub trait BotFunction {
-    fn usage(&self) -> String;
-    fn example(&self) -> (String, String);
     fn func(&mut self, args: &str, message: &Message) -> Result<(), Box<Error>>;
 }
 

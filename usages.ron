@@ -1,0 +1,7 @@
+{
+    "dice": Usage(
+        usage: "!dice (Int)d(Int) ..",
+        example_input: "!dice 1d6",
+        example_output: "1d6: [5] => 5",
+    ),
+}

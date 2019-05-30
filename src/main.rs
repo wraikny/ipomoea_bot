@@ -14,7 +14,7 @@ use std::{
 };
 
 use ipomoea_bot::{
-    config::Config,
+    config::{Config, Usage},
     funcs::{
         self,
         BotFunction,
@@ -30,14 +30,16 @@ use regex::Regex;
 
 fn main() {
     let config = Config::load("config.ron")
-        .expect("failed to load config");
+        .expect("failed to load config file");
     
     let discord = Discord::from_bot_token(&config.token)
         .expect("failed to login");
 
+    let usages = Usage::load("usages.ron")
+        .expect("failed to load usages file");
+
     let mut functions: HashMap<&str, Box<BotFunction>> = HashMap::new();
     functions.insert("dice", Box::new(funcs::dice::Dice::new(&discord, &config)));
-    // let functions = functions;
 
     // Establish and use a websocket connection
     let (mut connection, _) = discord.connect()
@@ -67,15 +69,16 @@ fn main() {
                         "usage" => {
                             let cmds: HashSet<_> = args.split(" ").filter(|s| *s != "").collect();
                             for name in cmds.iter() {
-                                match functions.get(name) {
-                                    Some(f) => {
-                                        let usage = format!("Usage:```{}```", f.usage());
-                                        let ex = f.example();
-                                        let example = format!("Example:```{}``````{}```", ex.0, ex.1);
-                                        let msg = format!("{}{}", usage, example);
-                                        let _ = discord.send_message(message.channel_id, &msg, "", false);
-                                    },
-                                    None => cmd_not_found(),
+                                if functions.contains_key(name) {
+                                    match usages.get(*name) {
+                                        Some(u) => {
+                                            let usage = format!("Usage:```{}```", u.usage);
+                                            let example = format!("Example:```{}``````{}```", u.example_input, u.example_output);
+                                            let msg = format!("{}{}", usage, example);
+                                            let _ = discord.send_message(message.channel_id, &msg, "", false);
+                                        },
+                                        None => cmd_not_found(),
+                                    }
                                 }
                             }
                         },

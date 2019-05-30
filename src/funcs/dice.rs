@@ -30,15 +30,6 @@ impl<'a> Dice<'a> {
 }
 
 impl<'a> BotFunction for Dice<'a> {
-    fn usage(&self) -> String {
-        r"!dice (Int)d(Int) ..".to_owned()
-    }
-
-    fn example(&self) -> (String, String) {
-        ("!dice 1d6".to_owned()
-        , "1d6: [5] => 5".to_owned())
-    }
-
     fn func(&mut self, args: &str, message: &Message) -> Result<(), Box<Error>> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"(?P<count>\d+)[dD](?P<roll>\d+)").unwrap();
